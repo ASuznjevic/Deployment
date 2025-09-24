@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Local Video Player • PROMPT1.1</title>
+  <!-- Tailwind CSS CDN (only external dependency) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- GENERATED_BY: PROMPT1.1 -->
+  <style>
+    /* Additional tiny tweaks that don't warrant Tailwind utilities */
+    .focus-ring:focus-visible { outline: 3px solid rgba(59,130,246,0.7); outline-offset: 2px; }
+    /* Make the log area auto-scroll to latest entries without showing scrollbars on mobile too prominently */
+    #logView { scrollbar-width: thin; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800 antialiased">
+  <!-- App Shell -->
+  <header class="border-b bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+    <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="h-9 w-9 grid place-items-center rounded-xl bg-blue-600 text-white font-bold">VP</div>
+        <div>
+          <h1 class="text-xl font-semibold leading-tight">Local Video Player</h1>
+          <p class="text-sm text-slate-500 leading-tight">Single‑file app • Works offline after load</p>
+        </div>
+      </div>
+      <span class="text-xs text-slate-500">v1.0 • <!-- GENERATED_BY: PROMPT1.1 --></span>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-6 lg:py-10 grid gap-6">
+    <!-- Upload Card -->
+    <section class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 overflow-hidden">
+      <div class="p-5 sm:p-6">
+        <h2 class="text-lg font-semibold mb-2">Open a video file</h2>
+        <p class="text-sm text-slate-600 mb-4">Supported by your browser (e.g., MP4/H.264, WebM/VP9, etc.). File stays on your device.</p>
+
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+          <!-- Accessible file input -->
+          <label for="videoFile" class="inline-flex items-center gap-2 w-fit px-4 py-2 rounded-xl bg-blue-600 text-white font-medium shadow hover:bg-blue-700 active:bg-blue-800 transition focus-ring cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path d="M12 16a1 1 0 0 1-1-1V6.41L8.7 8.7a1 1 0 1 1-1.4-1.42l4-4a1 1 0 0 1 1.4 0l4 4a1 1 0 1 1-1.4 1.42L13 6.4V15a1 1 0 0 1-1 1Z"/><path d="M5 14a1 1 0 1 0-2 0v3a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-3a1 1 0 1 0-2 0v3a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-3Z"/></svg>
+            Choose video…
+          </label>
+          <input id="videoFile" type="file" accept="video/*" class="sr-only" />
+          <div id="fileInfo" class="text-sm text-slate-500 truncate">No file selected</div>
+        </div>
+
+        <!-- Drag & drop helper (optional UX) -->
+        <div id="dropZone" class="mt-4 grid place-items-center rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 hover:bg-slate-50">
+          Drag & drop a video file here
+        </div>
+
+        <!-- Error banner (hidden by default) -->
+        <div id="errorBanner" class="hidden mt-4 rounded-xl border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm"></div>
+      </div>
+    </section>
+
+    <!-- Player Card (hidden until a valid file is loaded) -->
+    <section id="playerCard" class="hidden bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 overflow-hidden">
+      <div class="p-5 sm:p-6">
+        <div class="flex items-center justify-between gap-3 mb-3">
+          <h2 class="text-lg font-semibold">Player</h2>
+          <button id="resetBtn" type="button" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700">Reset</button>
+        </div>
+        <div class="aspect-video bg-slate-100 rounded-xl ring-1 ring-slate-200 overflow-hidden">
+          <video id="video" class="h-full w-full bg-black" controls playsinline preload="metadata"></video>
+        </div>
+        <p id="videoMeta" class="mt-3 text-xs text-slate-500"></p>
+      </div>
+    </section>
+
+    <!-- Debug Log -->
+    <section class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 overflow-hidden">
+      <div class="p-5 sm:p-6">
+        <div class="flex items-center justify-between gap-3 mb-3">
+          <h2 class="text-lg font-semibold">Debug log</h2>
+          <div class="flex items-center gap-2">
+            <button id="copyLogBtn" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700">Copy</button>
+            <button id="clearLogBtn" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700">Clear</button>
+          </div>
+        </div>
+        <div id="logView" class="h-56 sm:h-64 md:h-72 lg:h-80 overflow-y-auto rounded-xl bg-slate-50 ring-1 ring-slate-100 p-3">
+          <pre id="logText" class="text-xs leading-5 font-mono text-slate-700 whitespace-pre-wrap"></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="max-w-4xl mx-auto px-4 pb-10 text-center text-xs text-slate-500">
+    Built for reliability & UX. No data leaves your device.
+  </footer>
+
+  <script>
+    // ================================
+    // Utility: timestamped logging
+    // ================================
+    const logText = document.getElementById('logText');
+    const logView = document.getElementById('logView');
+
+    function ts() {
+      // e.g., 2025-09-24 10:11:30.123
+      const d = new Date();
+      const pad = (n, z = 2) => String(n).padStart(z, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(),3)}`;
+    }
+
+    function log(line, obj) {
+      const entry = `[${ts()}] ${line}`;
+      if (obj !== undefined) {
+        try { console.log(entry, obj); } catch {}
+        try { line += `\n${JSON.stringify(obj, null, 2)}` } catch {}
+      } else {
+        try { console.log(entry); } catch {}
+      }
+      logText.textContent += (logText.textContent ? '\n' : '') + `[${ts()}] ${line}`;
+      // Auto-scroll to bottom
+      logView.scrollTop = logView.scrollHeight;
+    }
+
+    // ================================
+    // Elements & state
+    // ================================
+    const input = document.getElementById('videoFile');
+    const fileInfo = document.getElementById('fileInfo');
+    const errorBanner = document.getElementById('errorBanner');
+    const dropZone = document.getElementById('dropZone');
+
+    const playerCard = document.getElementById('playerCard');
+    const videoEl = document.getElementById('video');
+    const videoMeta = document.getElementById('videoMeta');
+
+    const resetBtn = document.getElementById('resetBtn');
+    const clearLogBtn = document.getElementById('clearLogBtn');
+    const copyLogBtn = document.getElementById('copyLogBtn');
+
+    let currentObjectURL = null;
+
+    // ================================
+    // Capability checks + graceful errors
+    // ================================
+    (function capabilityCheck(){
+      const ok = !!window.URL && !!window.URL.createObjectURL && !!document.createElement('video').canPlayType;
+      if (!ok) {
+        showError('Your browser does not fully support local video playback. Please use a modern browser (e.g., latest Chrome, Edge, Firefox, or Safari).');
+        log('Compatibility check failed.');
+      } else {
+        log('Compatibility check passed.');
+      }
+    })();
+
+    // ================================
+    // Error helpers
+    // ================================
+    function showError(msg) {
+      errorBanner.textContent = msg;
+      errorBanner.classList.remove('hidden');
+      log('ERROR: ' + msg);
+    }
+    function clearError() {
+      errorBanner.textContent = '';
+      errorBanner.classList.add('hidden');
+    }
+
+    // ================================
+    // File handling & validation
+    // ================================
+    function validateFile(file) {
+      if (!file) return { ok: false, reason: 'No file provided.' };
+      if (!(file instanceof File)) return { ok: false, reason: 'Provided object is not a file.' };
+      if (!file.type || !file.type.startsWith('video/')) return { ok: false, reason: `Invalid file type: ${file.type || 'unknown'}. Please select a video file.` };
+      return { ok: true };
+    }
+
+    function loadVideoFromFile(file) {
+      clearError();
+      const { ok, reason } = validateFile(file);
+      log('File selected', { name: file?.name, type: file?.type, size: file?.size });
+      if (!ok) { showError(reason); return; }
+
+      // Revoke old object URL if any
+      if (currentObjectURL) {
+        try { URL.revokeObjectURL(currentObjectURL); } catch {}
+        currentObjectURL = null;
+      }
+
+      try {
+        currentObjectURL = URL.createObjectURL(file);
+        videoEl.src = currentObjectURL;
+        playerCard.classList.remove('hidden');
+        fileInfo.textContent = `${file.name} • ${(file.size/1_048_576).toFixed(2)} MB`;
+        videoMeta.textContent = 'Loading metadata…';
+        log('Video URL created and set');
+      } catch (e) {
+        showError('Could not load the selected file.');
+        log('Exception while creating object URL', e);
+      }
+    }
+
+    // ================================
+    // Event wiring
+    // ================================
+    input.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      loadVideoFromFile(file);
+    });
+
+    // Drag & drop UX
+    ;['dragenter','dragover'].forEach(evt => dropZone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add('bg-slate-100');
+    }));
+    ;['dragleave','drop'].forEach(evt => dropZone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove('bg-slate-100');
+    }));
+    dropZone.addEventListener('drop', (e) => {
+      const file = e.dataTransfer?.files?.[0];
+      loadVideoFromFile(file);
+    });
+
+    // Player events to log
+    const mediaEvents = ['loadedmetadata','canplay','play','pause','ended','error','stalled','waiting','seeking','seeked','timeupdate','volumechange','ratechange'];
+    mediaEvents.forEach(ev => videoEl.addEventListener(ev, (e) => {
+      if (ev === 'timeupdate') return; // avoid log spam; remove this line to log every frame advance
+      if (ev === 'error') {
+        const err = videoEl.error;
+        const errMsg = err ? (`MediaError code ${err.code}`) : 'Unknown media error';
+        showError(errMsg);
+        log(`Video event: ${ev}`, { code: err?.code });
+      } else if (ev === 'loadedmetadata') {
+        const meta = { duration: videoEl.duration, width: videoEl.videoWidth, height: videoEl.videoHeight }; 
+        videoMeta.textContent = `Resolution ${meta.width}×${meta.height} • Duration ${formatDuration(meta.duration)}`;
+        log('Video metadata loaded', meta);
+      } else {
+        log(`Video event: ${ev}`);
+      }
+    }));
+
+    // Controls
+    resetBtn.addEventListener('click', () => {
+      try { videoEl.pause(); } catch {}
+      try { videoEl.removeAttribute('src'); videoEl.load(); } catch {}
+      if (currentObjectURL) { try { URL.revokeObjectURL(currentObjectURL); } catch {} currentObjectURL = null; }
+      playerCard.classList.add('hidden');
+      fileInfo.textContent = 'No file selected';
+      videoMeta.textContent = '';
+      log('Player reset');
+      clearError();
+      input.value = '';
+    });
+
+    clearLogBtn.addEventListener('click', () => {
+      logText.textContent = '';
+      log('Log cleared');
+    });
+
+    copyLogBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(logText.textContent || '');
+        log('Log copied to clipboard');
+      } catch (e) {
+        log('Failed to copy log');
+      }
+    });
+
+    // ================================
+    // Helpers
+    // ================================
+    function formatDuration(sec) {
+      if (!isFinite(sec)) return 'Unknown';
+      const s = Math.floor(sec % 60).toString().padStart(2, '0');
+      const m = Math.floor((sec / 60) % 60).toString().padStart(2, '0');
+      const h = Math.floor(sec / 3600);
+      return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
+    }
+
+    // Initial log line
+    log('App initialized');
+  </script>
+</body>
+</html>
